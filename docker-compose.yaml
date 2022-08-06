@@ -1,0 +1,25 @@
+version: "3.8"
+
+services:
+
+  nginx:
+    container_name: "nginx"
+    image: nginx
+    ports:
+      - 80:80
+    volumes:
+      - ./nginx:/usr/share/nginx/html
+
+  localstack:
+    container_name: "localstack"
+    image: localstack/localstack
+    ports:
+      - "4566:4566"
+      - "4510-4559:4510-4559"
+    environment:
+      - DOCKER_HOST=unix:///var/run/docker.sock
+    volumes:
+      # - "${LOCALSTACK_VOLUME_DIR:-./volume}:/var/lib/localstack"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+
+  
