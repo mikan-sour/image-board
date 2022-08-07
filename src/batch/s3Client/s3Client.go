@@ -11,12 +11,12 @@ import (
 )
 
 type S3Client interface {
-	Create(bucketName string) error
-	List() ([]*s3.Bucket, error)
-	Put(bucketName, fileName string) error
-	Get(name string)
-	ListItems(bucketName string)
-	Delete(name string)
+	CreateBucket(bucketName string) error
+	ListBuckets() ([]*s3.Bucket, error)
+	PutObject(bucketName, fileName string) error
+	GetObject(bucketName, fileName string) (*os.File, error)
+	ListItems(bucketName string) (*[]*s3.Object, error)
+	DeleteObject(name string)
 }
 
 type S3ClientImpl struct {
@@ -36,7 +36,7 @@ func NewClient(config *aws.Config) (*S3ClientImpl, error) {
 	}, nil
 }
 
-func (s *S3ClientImpl) Create(bucketName string) error {
+func (s *S3ClientImpl) CreateBucket(bucketName string) error {
 	_, err := s.svc.CreateBucket(&s3.CreateBucketInput{
 		Bucket: aws.String(bucketName),
 	})
@@ -59,19 +59,16 @@ func (s *S3ClientImpl) Create(bucketName string) error {
 	return nil
 }
 
-func (s *S3ClientImpl) List() ([]*s3.Bucket, error) {
-	var buckets = []*s3.Bucket{}
+func (s *S3ClientImpl) ListBuckets() ([]*s3.Bucket, error) {
 	result, err := s.svc.ListBuckets(nil)
 	if err != nil {
-		return buckets, err
+		return nil, err
 	}
 
-	buckets = append(buckets, result.Buckets...)
-
-	return buckets, nil
+	return result.Buckets, nil
 }
 
-func (s *S3ClientImpl) Put(bucketName, fileName string) error {
+func (s *S3ClientImpl) PutObject(bucketName, fileName string) error {
 	file, err := os.Open(fileName)
 	if err != nil {
 		return err
@@ -90,5 +87,58 @@ func (s *S3ClientImpl) Put(bucketName, fileName string) error {
 	}
 
 	fmt.Printf("Successfully uploaded %q to %q\n", fileName, bucketName)
+	return nil
+}
+
+func (s *S3ClientImpl) GetObject(bucketName, fileName string) (*os.File, error) {
+	file, err := os.Create(fileName)
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	downloader := s3manager.NewDownloader(s.session)
+
+	_, err = downloader.Download(
+		file,
+		&s3.GetObjectInput{
+			Bucket: aws.String(bucketName),
+			Key:    aws.String(fileName),
+		},
+	)
+
+	if err != nil {
+		return nil, err
+	}
+
+	return file, nil
+}
+
+func (s *S3ClientImpl) ListItems(bucketName string) ([]*s3.Object, error) {
+	resp, err := s.svc.ListObjectsV2(
+		&s3.ListObjectsV2Input{Bucket: aws.String(bucketName)},
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return resp.Contents, nil
+}
+
+func (s *S3ClientImpl) DeleteObject(bucketName, fileName string) error {
+	_, err := s.svc.DeleteObject(&s3.DeleteObjectInput{Bucket: aws.String(bucketName), Key: aws.String(fileName)})
+	if err != nil {
+		return err
+	}
+
+	err = s.svc.WaitUntilObjectNotExists(&s3.HeadObjectInput{
+		Bucket: aws.String(bucketName),
+		Key:    aws.String(fileName),
+	})
+
+	if err != nil {
+		return err
+	}
+	fmt.Printf("Object %s successfully deleted from bucket %s", fileName, bucketName)
 	return nil
 }
