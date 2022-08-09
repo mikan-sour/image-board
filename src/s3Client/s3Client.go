@@ -15,8 +15,8 @@ type S3Client interface {
 	ListBuckets() ([]*s3.Bucket, error)
 	PutObject(bucketName, fileName string) error
 	GetObject(bucketName, fileName string) (*os.File, error)
-	ListItems(bucketName string) (*[]*s3.Object, error)
-	DeleteObject(name string)
+	ListItems(bucketName string) ([]*s3.Object, error)
+	DeleteObject(bucketName, fileName string) error
 }
 
 type S3ClientImpl struct {

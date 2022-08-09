@@ -2,6 +2,21 @@ version: "3.8"
 
 services:
 
+  api:
+    depends_on: 
+      - localstack
+      - nginx
+    container_name: api
+    build: .
+    environment:
+      - S3_DOMAIN=${S3_DOMAIN}
+      - S3_USERNAME=${S3_USERNAME}
+      - S3_PASSWORD=${S3_PASSWORD}
+      - S3_DEFAULT_REGION=${S3_DEFAULT_REGION}
+      - S3_BUCKET_NAME=${S3_BUCKET_NAME}
+    ports:
+      - "8080:8080"
+
   nginx:
     container_name: "nginx"
     image: nginx
@@ -13,13 +28,19 @@ services:
 
   localstack:
     container_name: "localstack"
-    image: localstack/localstack
+    image: localstack/localstack:0.12.13
     ports:
       - "4566:4566"
       - "4510-4559:4510-4559"
     environment:
+      - SERVICES=s3
       - DOCKER_HOST=unix:///var/run/docker.sock
+      - KINESIS_PROVIDER=kinesalite
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
-
+    healthcheck:
+      test: "bash -c 'AWS_ACCESS_KEY_ID=fake AWS_SECRET_ACCESS_KEY=fake aws --endpoint-url=http://localhost:4566 s3 ls'"
+      interval: 10s
+      timeout: 5s
+      retries: 3
   
