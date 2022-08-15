@@ -1,0 +1,27 @@
+.container {
+    display: flex; 
+    flex-direction: column; 
+    align-items:center; 
+    justify-content:center; 
+    width:100%;
+}
+
+.title {
+    display: flex; 
+    flex-direction: row; 
+    align-items:center; 
+    justify-content:center; 
+    width:100%;
+}
+
+button {
+    margin: 0 1rem; 
+    width:7rem; 
+    height:3rem;
+    background-color:crimson
+}
+
+img {
+    width: 20%; 
+    height:auto;
+}
